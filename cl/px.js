@@ -19,7 +19,13 @@ function Color(r,g,b,a) {
   out.a = a;
   out.to_s = function() {
     return "{"+r+","+g+","+b+","+a+"}";
-  }
+  };
+  out.validate = function() {
+    return ( r >= 0 && r <= 255 &&
+             g >= 0 && g <= 255 &&
+             b >= 0 && b <= 255 &&
+             a >= 0 && a <= 255 );
+  };
   return out;
 }
 function clear( outcv ) {
@@ -50,6 +56,8 @@ function Image( w, h, pixels ) {
   out.width = w;
   out.height = h;
   out.data = pixels;
+
+  // basics
   out.getColor = function(x,y) {
     var ind = (x + y * out.width)*4;
     if( ind >= 0 && ind < out.width * out.height ) {
@@ -58,6 +66,17 @@ function Image( w, h, pixels ) {
       return null;
     }
   }
+  out.setColor = function(x,y,c) {
+    assert( c.validate() );
+    var ind = (x + y * out.width)*4;
+    if( ind >= 0 && ind < out.width * out.height ) {
+      out.data[ind] = c.r;
+      out.data[ind+1] = c.g;
+      out.data[ind+2] = c.b;
+      out.data[ind+3] = c.a;      
+    } 
+  }
+  
   // scale whole image to Left-Top
   out.scaleNearest = function( xs, ys ) {
     var tow = out.width * xs;
@@ -95,18 +114,6 @@ function MainCanvas( cv, hudcv ) {
   out.zoom = 16; // screen pixel per sprite pixel
   out.pw = cv.width / out.zoom;
   out.ph = cv.height / out.zoom;
-  
-  out.draw = function() {
-    fillRect( cv, 0,0, cv.width, cv.height, Color(255,255,255,255) );
-
-    for(var y=0;y<out.ph;y++) {
-      for(var x=0;x<out.pw;x++) {
-        var c = Color( irange(0,255),irange(0,255),irange(0,255),255);
-        var z = out.zoom;
-        fillRect( out.canvas, x*z, y*z, z,z, c );        
-      }
-    }
-  };
 
   out.setImage = function(img) {
     out.img = img;
@@ -114,7 +121,7 @@ function MainCanvas( cv, hudcv ) {
   
   out.renderCurrentImage = function() {
     assert(out.img);
-    p( "renderCurrentImage:", out.img );
+
     for(var y=0;y<out.ph;y++){
       for(var x=0;x<out.pw;x++){
         var col = out.img.getColor(x,y); // TODO: scroll
@@ -134,27 +141,49 @@ function MainCanvas( cv, hudcv ) {
     }
   };
   
-  //
+  // Cursor
   
   out.cursor_x = 0;
   out.cursor_y = 0;
   
   $(hudcv).mousemove( function(e) {
-    var x = e.offsetX;
-    var y = e.offsetY;
-    var nix = int(x/out.zoom);
-    var niy = int(y/out.zoom);
+    var x = e.offsetX, y = e.offsetY;
+    var nix = int(x/out.zoom), niy = int(y/out.zoom);
     if( nix != out.cursor_x || niy != out.cursor_y ) {
       out.cursor_x = nix;
       out.cursor_y = niy;
 
-      clear( out.hudcanvas ); // これが重い
+      clear( out.hudcanvas ); // TODO: consuming CPU too much
       out.drawPixelGrid();
       strokeRect( out.hudcanvas, nix*out.zoom, niy*out.zoom, out.zoom, out.zoom, 0, Color(255,255,255,255) );
+    }
+
+    if( out.mouse_down ) {
+      out.tryDraw( x,y );
     }
     return true;
   });
 
+  out.mouse_down = false;
+
+  $(hudcv).mousedown( function(e) {
+    out.mouse_down = true;
+    out.tryDraw( e.offsetX, e.offsetY );
+  });
+
+  $(hudcv).mouseup( function(e) {
+    out.mouse_down = false;
+  });
+
+  // x,y: offsetX|Y
+  out.tryDraw = function( x, y ) { 
+    var nix = int(x/out.zoom), niy = int(y/out.zoom);
+    var c = Color(255,255,0,255);
+    out.img.setColor( nix, niy, c );
+    out.renderCurrentImage();
+  };
+
+  out.drawPixelGrid();
   
   return out;
 };
@@ -163,7 +192,6 @@ var maincanv = null;
 
 function setupMain(){
   maincanv = MainCanvas( $("#maincanvas")[0], $("#mainhudcanvas")[0] );
-  maincanv.draw();
 
   PNG.load( "met.png", function(png) {
     var img = Image(png.width, png.height, png.decode() );
