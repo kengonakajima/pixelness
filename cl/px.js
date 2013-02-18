@@ -34,6 +34,22 @@ function Sheet() {
 
 }
 
+function Image( w, h, pixels ) {
+  var out = {};
+  out.width = w;
+  out.height = h;
+  out.data = pixels;
+  out.getColor = function(x,y) {
+    var ind = (x + y * out.width)*4;
+    if( ind >= 0 && ind < out.width * out.height ) {
+      return Color( out.data[ind], out.data[ind+1], out.data[ind+2], out.data[ind+3] );
+    } else {
+      return null;
+    }
+  }
+  return out;
+}
+
 function MainCanvas( cv ) {
   var out = {};
   out.canvas = cv;
@@ -51,23 +67,38 @@ function MainCanvas( cv ) {
         fillRect( out.canvas, x*z, y*z, z,z, c );        
       }
     }
-
   };
+
+  out.setImage = function(img) {
+    out.img = img;
+  };
+  
+  out.renderCurrentImage = function() {
+    assert(out.img);
+    p( "renderCurrentImage:", out.img );
+    for(var y=0;y<out.ph;y++){
+      for(var x=0;x<out.pw;x++){
+        var col = out.img.getColor(x,y); // TODO: scroll
+        fillRect( out.canvas, x*out.zoom,y*out.zoom,out.zoom,out.zoom,col);
+      }
+    }
+  };
+
+  
   return out;
 };
 
-
-function callback(png) {
-  var l = png.data.length;
-  var pixel_num = 900 * 675;
-  var ary = png.decode();
-  p("PNG:",ary.length /900 /675);
-};
+var maincanv = null;
 
 function setupMain(){
-  var maincanv = MainCanvas( $("#maincanvas")[0] );
+  maincanv = MainCanvas( $("#maincanvas")[0] );
   maincanv.draw();
 
-  PNG.load( "met.png", callback );
+  PNG.load( "met.png", function(png) {
+    var img = Image(png.width, png.height, png.decode() );
+    maincanv.setImage( img );
+    maincanv.renderCurrentImage();
+  });
+  
 }
 
