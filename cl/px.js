@@ -22,10 +22,21 @@ function Color(r,g,b,a) {
   }
   return out;
 }
+function clear( outcv ) {
+  var ctx = outcv.getContext("2d");  
+  ctx.clearRect(0, 0, outcv.width, outcv.height);  
+}
 function fillRect( outcv, x1, y1, w, h, col ) {
   var ctx = outcv.getContext("2d");
   ctx.fillStyle = "rgb("+col.r+","+col.g+","+col.b+")";
   ctx.fillRect(x1,y1,w,h);
+}
+
+function strokeRect( outcv, x1, y1, w, h, margin, col ) {
+  var ctx = outcv.getContext("2d");
+  ctx.strokeStyle = "rgb("+col.r+","+col.g+","+col.b+")";
+  ctx.strokeRect(x1-margin,y1-margin,w+margin*2,h+margin*2);
+  
 }
 
 
@@ -77,10 +88,11 @@ function Image( w, h, pixels ) {
   return out;
 }
 
-function MainCanvas( cv ) {
+function MainCanvas( cv, hudcv ) {
   var out = {};
   out.canvas = cv;
-  out.zoom = 8; // screen pixel per sprite pixel
+  out.hudcanvas = hudcv;
+  out.zoom = 16; // screen pixel per sprite pixel
   out.pw = cv.width / out.zoom;
   out.ph = cv.height / out.zoom;
   
@@ -111,6 +123,38 @@ function MainCanvas( cv ) {
     }
   };
 
+  //
+      
+  out.drawPixelGrid = function() {
+    var c = Color(128,128,128,128);
+    for(var y=0;y<out.ph;y++){
+      for(var x=0;x<out.pw;x++){
+        fillRect( out.hudcanvas, x*out.zoom, y*out.zoom, 1,1, c);
+      }
+    }
+  };
+  
+  //
+  
+  out.cursor_x = 0;
+  out.cursor_y = 0;
+  
+  $(hudcv).mousemove( function(e) {
+    var x = e.offsetX;
+    var y = e.offsetY;
+    var nix = int(x/out.zoom);
+    var niy = int(y/out.zoom);
+    if( nix != out.cursor_x || niy != out.cursor_y ) {
+      out.cursor_x = nix;
+      out.cursor_y = niy;
+
+      clear( out.hudcanvas ); // これが重い
+      out.drawPixelGrid();
+      strokeRect( out.hudcanvas, nix*out.zoom, niy*out.zoom, out.zoom, out.zoom, 0, Color(255,255,255,255) );
+    }
+    return true;
+  });
+
   
   return out;
 };
@@ -118,7 +162,7 @@ function MainCanvas( cv ) {
 var maincanv = null;
 
 function setupMain(){
-  maincanv = MainCanvas( $("#maincanvas")[0] );
+  maincanv = MainCanvas( $("#maincanvas")[0], $("#mainhudcanvas")[0] );
   maincanv.draw();
 
   PNG.load( "met.png", function(png) {
