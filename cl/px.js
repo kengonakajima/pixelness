@@ -47,6 +47,33 @@ function Image( w, h, pixels ) {
       return null;
     }
   }
+  // scale whole image to Left-Top
+  out.scaleNearest = function( xs, ys ) {
+    var tow = out.width * xs;
+    var toh = out.height * ys;
+    var newdata = new Array();
+    for(var y=0;y<toh;y++) {
+      for(var x=0;x<tow;x++) {
+        var real_x = int(x / xs);
+        var real_y = int(y / ys);
+        var ind = (real_x + real_y * out.width)*4;
+        var newind = (x + y * out.width)*4;
+        newdata[newind] = out.data[ind];
+        newdata[newind+1] = out.data[ind+1];
+        newdata[newind+2] = out.data[ind+2];
+        newdata[newind+3] = out.data[ind+3];
+      }
+    }
+    for(var y=0;y<toh;y++) {
+      for(var x=0;x<tow;x++) {
+        var ind = (x + y * out.width)*4;
+        out.data[ind] = newdata[ind];
+        out.data[ind+1] = newdata[ind+1];
+        out.data[ind+2] = newdata[ind+2];
+        out.data[ind+3] = newdata[ind+3];        
+      }
+    }
+  };
   return out;
 }
 
@@ -96,6 +123,7 @@ function setupMain(){
 
   PNG.load( "met.png", function(png) {
     var img = Image(png.width, png.height, png.decode() );
+    img.scaleNearest( 0.5, 0.5 );    
     maincanv.setImage( img );
     maincanv.renderCurrentImage();
   });
