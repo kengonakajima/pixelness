@@ -166,9 +166,26 @@ function MainCanvas( cv, hudcv ) {
 
   out.mouse_down = false;
 
+  out.default_cursor_color = Color(255,255,255,255);
+  out.cursor_color = out.default_cursor_color;
+  
+  $(hudcv).bind("contextmenu", function() {    return false;   });
+  
   $(hudcv).mousedown( function(e) {
-    out.mouse_down = true;
-    out.tryDraw( e.offsetX, e.offsetY );
+    var right = false;
+    if( e.which == 3 || e.shiftKey ) right = true;
+    
+    if( right ) {
+      var nix = int(e.offsetX/out.zoom), niy = int(e.offsetY/out.zoom);
+      out.cursor_color = out.img.getColor(nix,niy);
+      if( out.cursor_color == null ) {
+        out.cursor_color = out.default_cursor_color;
+      }
+
+    } else {
+      out.mouse_down = true;
+      out.tryDraw( e.offsetX, e.offsetY );
+    }
   });
 
   $(hudcv).mouseup( function(e) {
@@ -178,8 +195,7 @@ function MainCanvas( cv, hudcv ) {
   // x,y: offsetX|Y
   out.tryDraw = function( x, y ) { 
     var nix = int(x/out.zoom), niy = int(y/out.zoom);
-    var c = Color(255,255,0,255);
-    out.img.setColor( nix, niy, c );
+    out.img.setColor( nix, niy, out.cursor_color );
     out.renderCurrentImage();
   };
 
