@@ -1,15 +1,5 @@
 
 
-$(document).ready( function() {
-  setup();
-});
-
-
-function setup() {
-  setupMain();
-
-  p("setup done");
-}
 
 function Color(r,g,b,a) {
   var out = {}
@@ -34,22 +24,38 @@ function clear( outcv ) {
 }
 function fillRect( outcv, x1, y1, w, h, col ) {
   var ctx = outcv.getContext("2d");
-  ctx.fillStyle = "rgb("+col.r+","+col.g+","+col.b+")";
+  ctx.fillStyle = "rgba("+col.r+","+col.g+","+col.b+","+(col.a/255.0)+")";
   ctx.fillRect(x1,y1,w,h);
 }
 
-function strokeRect( outcv, x1, y1, w, h, margin, col ) {
+function strokeRect( outcv, x1, y1, w, h, margin, width, col ) {
   var ctx = outcv.getContext("2d");
-  ctx.strokeStyle = "rgb("+col.r+","+col.g+","+col.b+")";
-  ctx.strokeRect(x1-margin,y1-margin,w+margin*2,h+margin*2);
+  print("a:", col.a );
+  ctx.strokeStyle = "rgba("+col.r+","+col.g+","+col.b+","+(col.a/255.0)+")";
+  ctx.lineWidth = width;
+  ctx.strokeRect(x1-margin,y1-margin,w+margin*2,h+margin*2); 
+}
+
   
+// ピクセルが無いことを表す市松模様
+var white_col = Color(255,255,255,255);
+var gray_col = Color(200,200,200,255);
+
+function fillRectBlankBG( outcv, x1, y1, w, h ) {
+  fillRect( outcv, x1,y1,w/2,h/2, white_col); // left-top
+  fillRect( outcv, x1+w/2,y1,w/2,h/2, gray_col); // right-top
+  fillRect( outcv, x1,y1+h/2,w/2,h/2, gray_col) // left-bottom
+  fillRect( outcv, x1+w/2,y1+h/2,w/2,h/2, white_col ); // right-bottom
+}
+// 背景つきピクセル全体
+function fillRectPixel( outcv, x1,y1,w,h, col ) {
+  if( col.a < 255 ) {
+    fillRectBlankBG( outcv, x1,y1,w,h );    
+  }
+  fillRect( outcv, x1,y1,w,h,col);  
 }
 
-
-function Sheet() {
-
-
-}
+///////////////
 
 function Image( w, h, pixels ) {
   var out = {};
@@ -107,6 +113,59 @@ function Image( w, h, pixels ) {
   return out;
 }
 
+
+//////////////////
+function Inventory( elems ) {
+  var out = {};
+  assert( elems.length == 9 );
+  out.num = 9;
+  out.selected_ind = 0;
+  out.canvases = elems;
+  out.colors = [];
+
+  out.setColor = function(ind,c) {
+    assert( ind >= 0 && ind < out.num );
+    c.validate();
+    out.colors[ind] = c;
+  };
+
+  //
+  
+
+
+
+  out.setColor( 0, Color(255,0,0,255) );
+  out.setColor( 1, Color(0,255,0,255) );
+  out.setColor( 2, Color(0,0,255,255) );
+  
+  out.setColor( 3, Color(255,0,0,128) );
+  out.setColor( 4, Color(0,255,0,128) );
+  out.setColor( 5, Color(0,0,255,128) );
+  
+  out.setColor( 6, Color(0,0,0,0) );
+  out.setColor( 7, Color(0,0,0,0) );
+  out.setColor( 8, Color(0,0,0,0) );  
+  
+  out.refresh = function() {
+    for(var i=0;i<out.num;i++) {
+      var canv = out.canvases[i];
+      fillRectPixel( canv, 0, 0, canv.width, canv.height, out.colors[i] );
+      if( i == out.selected_ind ) {
+        strokeRect( canv, 0,0, canv.width, canv.height, 0, 8, Color(255,255,255,255) );
+      }
+    }
+
+    
+  };
+
+  out.refresh();
+  
+  return out;
+  
+}
+
+//////////////////
+
 function MainCanvas( cv, hudcv ) {
   var out = {};
   out.canvas = cv;
@@ -155,7 +214,7 @@ function MainCanvas( cv, hudcv ) {
 
       clear( out.hudcanvas ); // TODO: consuming CPU too much
       out.drawPixelGrid();
-      strokeRect( out.hudcanvas, nix*out.zoom, niy*out.zoom, out.zoom, out.zoom, 0, Color(255,255,255,255) );
+      strokeRect( out.hudcanvas, nix*out.zoom, niy*out.zoom, out.zoom, out.zoom, 0, 1, Color(255,255,255,255) );
     }
 
     if( out.mouse_down ) {
@@ -218,3 +277,42 @@ function setupMain(){
   
 }
 
+var inventory = null;
+function setupInventory() {
+  var elems = new Array( $("#inventory0")[0],$("#inventory1")[0],$("#inventory2")[0],$("#inventory3")[0],
+                         $("#inventory4")[0],$("#inventory5")[0],$("#inventory6")[0],$("#inventory7")[0],$("#inventory8")[0] );
+
+  inventory = Inventory( elems );
+  
+}
+///////////
+
+
+function setupKeyboard() {
+  $(document).keydown( function(e) {
+//    print("kdown:",e.keyCode );
+    switch( e.keyCode ){
+    case 78: //n
+      var url = maincanv.canvas.toDataURL();
+      window.open(url);
+      break;
+    }
+    
+  });
+}
+
+
+///////////
+
+
+$(document).ready( function() {
+  setup();
+});
+
+
+function setup() {
+  setupMain();
+  setupInventory();
+  setupKeyboard();  
+  p("setup done");
+}
