@@ -1,0 +1,3 @@
+[submodule "cl/jumino"]
+	path = cl/jumino
+	url = git@github.com:kengonakajima/jumino
