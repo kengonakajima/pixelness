@@ -16,6 +16,12 @@ function Color(r,g,b,a) {
              b >= 0 && b <= 255 &&
              a >= 0 && a <= 255 );
   };
+  out.toString = function() {
+    return "rgba("+out.r+","+out.g+","+out.b+","+(out.a/255.0)+")";    
+  }
+  out.isBright = function() {
+    return ( out.r > 128 || out.g > 128 || out.b > 128 );
+  }
   return out;
 }
 function clear( outcv ) {
@@ -24,22 +30,28 @@ function clear( outcv ) {
 }
 function fillRect( outcv, x1, y1, w, h, col ) {
   var ctx = outcv.getContext("2d");
-  ctx.fillStyle = "rgba("+col.r+","+col.g+","+col.b+","+(col.a/255.0)+")";
+  ctx.fillStyle = col.toString()
   ctx.fillRect(x1,y1,w,h);
 }
 
 function strokeRect( outcv, x1, y1, w, h, margin, width, col ) {
   var ctx = outcv.getContext("2d");
-  print("a:", col.a );
-  ctx.strokeStyle = "rgba("+col.r+","+col.g+","+col.b+","+(col.a/255.0)+")";
+  ctx.strokeStyle = col.toString();
   ctx.lineWidth = width;
   ctx.strokeRect(x1-margin,y1-margin,w+margin*2,h+margin*2); 
+}
+function drawText( outcv, s, x,y, col ) {
+  var ctx = outcv.getContext("2d");
+  ctx.fillStyle = col.toString();
+  ctx.font = "10px Arial";
+  ctx.fillText( s, x, y );
 }
 
   
 // ピクセルが無いことを表す市松模様
 var white_col = Color(255,255,255,255);
 var gray_col = Color(200,200,200,255);
+var black_col = Color(1,1,1,255);
 
 function fillRectBlankBG( outcv, x1, y1, w, h ) {
   fillRect( outcv, x1,y1,w/2,h/2, white_col); // left-top
@@ -130,9 +142,6 @@ function Inventory( elems ) {
   };
 
   //
-  
-
-
 
   out.setColor( 0, Color(255,0,0,255) );
   out.setColor( 1, Color(0,255,0,255) );
@@ -151,13 +160,34 @@ function Inventory( elems ) {
       var canv = out.canvases[i];
       fillRectPixel( canv, 0, 0, canv.width, canv.height, out.colors[i] );
       if( i == out.selected_ind ) {
-        strokeRect( canv, 0,0, canv.width, canv.height, 0, 8, Color(255,255,255,255) );
+        strokeRect( canv, 0,0, canv.width, canv.height, 0, 8, white_col );
+      } else {
+        var col = white_col;
+        if( out.colors[i].isBright() ) {
+          col = black_col;
+        }
+        drawText( canv, i+1, 35,45, col );
       }
     }
-
-    
   };
 
+  out.selectAt = function(ind) {
+    out.selected_ind = ind;
+    g_maincanvas.setCursorColor( out.colors[ind] );
+
+    out.refresh();
+  };
+
+  out.getSelectedColor = function() {
+    return out.colors[ out.selected_ind ];
+  };
+  
+  out.setSelectedColor = function(col) {
+    col.validate();
+    out.colors[out.selected_ind] = col;
+    out.refresh();
+  };
+  
   out.refresh();
   
   return out;
@@ -225,8 +255,7 @@ function MainCanvas( cv, hudcv ) {
 
   out.mouse_down = false;
 
-  out.default_cursor_color = Color(255,255,255,255);
-  out.cursor_color = out.default_cursor_color;
+  out.cursor_color = null;
   
   $(hudcv).bind("contextmenu", function() {    return false;   });
   
@@ -236,10 +265,9 @@ function MainCanvas( cv, hudcv ) {
     
     if( right ) {
       var nix = int(e.offsetX/out.zoom), niy = int(e.offsetY/out.zoom);
-      out.cursor_color = out.img.getColor(nix,niy);
-      if( out.cursor_color == null ) {
-        out.cursor_color = out.default_cursor_color;
-      }
+      var col = out.img.getColor(nix,niy);
+      out.cursor_color = col;
+      g_inventory.setSelectedColor(col);
 
     } else {
       out.mouse_down = true;
@@ -258,31 +286,36 @@ function MainCanvas( cv, hudcv ) {
     out.renderCurrentImage();
   };
 
+  out.setCursorColor = function(col) {
+    col.validate();
+    out.cursor_color = col;
+  };
+
   out.drawPixelGrid();
   
   return out;
 };
 
-var maincanv = null;
+var g_maincanvas = null;
 
 function setupMain(){
-  maincanv = MainCanvas( $("#maincanvas")[0], $("#mainhudcanvas")[0] );
+  g_maincanvas = MainCanvas( $("#maincanvas")[0], $("#mainhudcanvas")[0] );
 
   PNG.load( "met.png", function(png) {
     var img = Image(png.width, png.height, png.decode() );
     img.scaleNearest( 0.5, 0.5 );    
-    maincanv.setImage( img );
-    maincanv.renderCurrentImage();
+    g_maincanvas.setImage( img );
+    g_maincanvas.renderCurrentImage();
   });
   
 }
 
-var inventory = null;
+var g_inventory = null;
 function setupInventory() {
   var elems = new Array( $("#inventory0")[0],$("#inventory1")[0],$("#inventory2")[0],$("#inventory3")[0],
                          $("#inventory4")[0],$("#inventory5")[0],$("#inventory6")[0],$("#inventory7")[0],$("#inventory8")[0] );
 
-  inventory = Inventory( elems );
+  g_inventory = Inventory( elems );
   
 }
 ///////////
@@ -290,12 +323,25 @@ function setupInventory() {
 
 function setupKeyboard() {
   $(document).keydown( function(e) {
-//    print("kdown:",e.keyCode );
+    print("kdown:",e.keyCode );
     switch( e.keyCode ){
+    case 49: //1
+    case 50: 
+    case 51: 
+    case 52: 
+    case 53:
+    case 54:
+    case 55:
+    case 56:
+    case 57: //9
+      g_inventory.selectAt(e.keyCode - 49);
+      break;
+      
     case 78: //n
-      var url = maincanv.canvas.toDataURL();
+      var url = g_maincanvas.canvas.toDataURL();
       window.open(url);
       break;
+
     }
     
   });
@@ -313,6 +359,7 @@ $(document).ready( function() {
 function setup() {
   setupMain();
   setupInventory();
+  g_maincanvas.setCursorColor( g_inventory.getSelectedColor() );
   setupKeyboard();  
   p("setup done");
 }
