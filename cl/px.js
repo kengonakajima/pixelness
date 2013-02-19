@@ -260,7 +260,7 @@ function MainCanvas( cv, hudcv ) {
   
   $(hudcv).mousedown( function(e) {
     var right = false;
-    if( e.which == 3 || e.shiftKey ) right = true;
+    if( e.which == 3 || e.ctrlKey ) right = true;
     
     if( right ) {
       var nix = int(e.offsetX/out.zoom), niy = int(e.offsetY/out.zoom);
