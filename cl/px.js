@@ -252,25 +252,25 @@ function MainCanvas( cv, hudcv ) {
     return true;
   });
 
-  out.mouse_down = false;
+
 
   out.cursor_color = null;
-  
-  $(hudcv).bind("contextmenu", function() {    return false;   });
-  
-  $(hudcv).mousedown( function(e) {
-    var right = false;
-    if( e.which == 3 || e.ctrlKey ) right = true;
-    
-    if( right ) {
-      var nix = int(e.offsetX/out.zoom), niy = int(e.offsetY/out.zoom);
-      var col = out.img.getColor(nix,niy);
-      out.cursor_color = col;
-      g_inventory.setSelectedColor(col);
+  out.mouse_down = false;
 
-    } else {
-      out.mouse_down = true;
-      out.tryDraw( e.offsetX, e.offsetY );
+  $(hudcv).mousedown( function(e) {
+    if( e.which == 1 && !e.ctrlKey ){ // left
+      if( e.altKey ) {
+        var nix = int(e.offsetX/out.zoom), niy = int(e.offsetY/out.zoom);
+        var col = out.img.getColor(nix,niy);
+        out.cursor_color = col;
+        g_inventory.setSelectedColor(col);
+      } else {
+        out.mouse_down = true;
+        out.tryDraw( e.offsetX, e.offsetY );
+      }
+    } else if( e.which == 3 || (e.which == 1 && e.ctrlKey) ) { // right
+      print("right clk");
+      g_menu.show(e.clientX - 16, e.clientY - 16 );
     }
   });
 
@@ -278,6 +278,7 @@ function MainCanvas( cv, hudcv ) {
     out.mouse_down = false;
   });
 
+  
   // x,y: offsetX|Y
   out.tryDraw = function( x, y ) { 
     var nix = int(x/out.zoom), niy = int(y/out.zoom);
@@ -317,6 +318,64 @@ function setupInventory() {
   g_inventory = Inventory( elems );
   
 }
+
+var g_menu = null;
+
+function Menu(menudiv ) {
+  var out = {};
+  out.div = menudiv
+  out.entries = new Array();  
+  out.show = function(x,y) {
+    out.div.css("visibility","visible");
+    out.div.css("left", x );
+    out.div.css("top", y );
+    print("show");
+  };
+
+  out.hide = function() {
+    print("OUT");
+    out.div.css("visibility","hidden" );
+  };
+  $("#menu_content").hover( function(){},
+                            function(){
+                              out.hide(); });
+  
+  out.addEntry = function( name, f ) {
+    var outdiv = $("#menu_content");
+    var span = $("<span>"+name+"<br></span>");
+    span.id = "menu_" + name;
+    span.css("-webkit-user-select","none");
+    span.hover( function(e) {
+      $(e.target).css("background","blue");
+    }, function(e) {
+      $(e.target).css("background","white");
+    });
+    span.click( function(e) {
+      print("clk", e.target );
+    });
+
+
+    outdiv.append(span);
+  };
+  
+  return out;
+}
+
+function setupMenu() {
+  var menu = $("#menu");
+  g_menu = Menu( menu );
+
+  g_menu.addEntry( "remove_color", function() {
+    print("rm col");
+  });
+  g_menu.addEntry( "fill", function() {
+    print("fill");
+  });
+  
+}
+      
+
+
 ///////////
 
 
@@ -346,6 +405,12 @@ function setupKeyboard() {
   });
 }
 
+/////////////
+
+
+function setupGlobal() {
+  $(document).bind("contextmenu", function() {    return false;   });
+}
 
 ///////////
 
@@ -356,9 +421,12 @@ $(document).ready( function() {
 
 
 function setup() {
+  setupGlobal();
   setupMain();
   setupInventory();
+  setupMenu();
   g_maincanvas.setCursorColor( g_inventory.getSelectedColor() );
   setupKeyboard();  
   p("setup done");
 }
+
