@@ -20,7 +20,7 @@ function Color(r,g,b,a) {
     return "rgba("+out.r+","+out.g+","+out.b+","+(out.a/255.0)+")";    
   }
   out.isBright = function() {
-    return ( out.r > 128 || out.g > 128 || out.b > 128 );
+    return ( out.r*out.a > 128 || out.g*out.a > 128 || out.b*out.a > 128 ) || out.a < 32;
   }
   return out;
 }
@@ -214,7 +214,7 @@ function MainCanvas( cv, hudcv ) {
     for(var y=0;y<out.ph;y++){
       for(var x=0;x<out.pw;x++){
         var col = out.img.getColor(x,y); // TODO: scroll
-        fillRect( out.canvas, x*out.zoom,y*out.zoom,out.zoom,out.zoom,col);
+        fillRectPixel( out.canvas, x*out.zoom,y*out.zoom,out.zoom,out.zoom,col);
       }
     }
   };
@@ -222,10 +222,9 @@ function MainCanvas( cv, hudcv ) {
   //
       
   out.drawPixelGrid = function() {
-    var c = Color(128,128,128,128);
     for(var y=0;y<out.ph;y++){
       for(var x=0;x<out.pw;x++){
-        fillRect( out.hudcanvas, x*out.zoom, y*out.zoom, 1,1, c);
+        fillRect( out.hudcanvas, x*out.zoom, y*out.zoom, 1,1, white_col);
       }
     }
   };
