@@ -161,13 +161,13 @@ function Inventory( elems ) {
       fillRectPixel( canv, 0, 0, canv.width, canv.height, out.colors[i] );
       if( i == out.selected_ind ) {
         strokeRect( canv, 0,0, canv.width, canv.height, 0, 8, white_col );
-      } else {
-        var col = white_col;
-        if( out.colors[i].isBright() ) {
-          col = black_col;
-        }
-        drawText( canv, i+1, 35,45, col );
+      } 
+      var col = white_col;
+      if( out.colors[i].isBright() ) {
+        col = black_col;
       }
+      drawText( canv, i+1, 35,40, col );
+
     }
   };
 
